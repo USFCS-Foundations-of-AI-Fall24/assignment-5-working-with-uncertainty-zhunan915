@@ -4,7 +4,7 @@ import random
 import argparse
 import codecs
 import os
-import numpy
+import numpy as np
 
 # Sequence - represents a sequence of hidden states and corresponding
 # output variables.
@@ -62,7 +62,25 @@ class HMM:
    ## you do this.
     def generate(self, n):
         """return an n-length Sequence by randomly sampling from this HMM."""
-        pass
+        states = []
+        emissions = []
+        current_state = "#"
+        for step in range(n):
+            if current_state in self.transitions:
+                next_states = list(self.transitions[current_state].keys())
+                next_probs = list(self.transitions[current_state].values())
+                current_state = np.random.choice(next_states, p=next_probs)
+            else:
+                break
+            states.append(current_state)
+            if current_state in self.emissions:
+                possible_emissions = list(self.emissions[current_state].keys())
+                emission_probs = list(self.emissions[current_state].values())
+                emission = np.random.choice(possible_emissions, p=emission_probs)
+                emissions.append(emission)
+            else:
+                break
+        return Sequence(states, emissions)
 
     def forward(self, sequence):
         pass
@@ -81,6 +99,30 @@ class HMM:
 
 
 
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Hidden Markov Model Sequence Generator")
+    parser.add_argument("domain", help="Domain name (e.g., cat, partofspeech, lander)")
+    parser.add_argument("--generate", type=int, help="Number of states to generate")
+    args = parser.parse_args()
+
+    hmm = HMM()
+    hmm.load(args.domain)
+
+    if args.generate:
+        sequence = hmm.generate(args.generate)
+        print("Generated States:\n", ' '.join(sequence.stateseq))
+        print("Generated Emissions:\n", ' '.join(sequence.outputseq))
+
+    '''
+        run python HMM.py cat --generate 20
+        results:
+            Generated States:
+                grumpy grumpy happy hungry grumpy happy happy hungry grumpy grumpy happy hungry grumpy happy happy hungry grumpy hungry grumpy happy
+            Generated Emissions:
+                meow silent silent silent silent meow purr meow meow meow meow meow silent purr meow purr meow meow purr meow
+    '''
 
 
 
