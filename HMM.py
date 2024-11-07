@@ -27,9 +27,6 @@ class HMM:
         e.g. {'happy': {'silent': '0.2', 'meow': '0.3', 'purr': '0.5'},
               'grumpy': {'silent': '0.5', 'meow': '0.4', 'purr': '0.1'},
               'hungry': {'silent': '0.2', 'meow': '0.6', 'purr': '0.2'}}"""
-
-
-
         self.transitions = transitions
         self.emissions = emissions
 
@@ -38,7 +35,28 @@ class HMM:
         """reads HMM structure from transition (basename.trans),
         and emission (basename.emit) files,
         as well as the probabilities."""
-        pass
+        with open(f"{basename}.trans", "r") as f:
+            for line in f:
+                elem = line.strip().split()
+                state = elem[0]
+                if state not in self.transitions:
+                    self.transitions[state] = {}
+                for i in range(1, len(elem), 2):
+                    next_state = elem[i]
+                    prob = float(elem[i + 1])
+                    self.transitions[state][next_state] = prob
+
+        # Load emissions
+        with open(f"{basename}.emit", "r") as f:
+            for line in f:
+                elem = line.strip().split()
+                state = elem[0]
+                if state not in self.emissions:
+                    self.emissions[state] = {}
+                for i in range(1, len(elem), 2):
+                    next_state = elem[i]
+                    prob = float(elem[i + 1])
+                    self.emissions[state][next_state] = prob
 
 
    ## you do this.
