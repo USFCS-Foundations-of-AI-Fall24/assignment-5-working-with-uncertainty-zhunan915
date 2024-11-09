@@ -64,28 +64,55 @@ class HMM:
         """return an n-length Sequence by randomly sampling from this HMM."""
         states = []
         emissions = []
-        current_state = "#"
-        for step in range(n):
-            if current_state in self.transitions:
-                next_states = list(self.transitions[current_state].keys())
-                next_probs = list(self.transitions[current_state].values())
-                current_state = np.random.choice(next_states, p=next_probs)
-            else:
-                break
+        if "#" not in self.transitions:
+            raise ValueError("Initial state '#' not defined.")
+
+        next_states = list(self.transitions["#"].keys())
+        next_probs = list(map(float, self.transitions["#"].values()))
+        current_state = np.random.choice(next_states, p=next_probs)
+
+        for elem in range(n):
             states.append(current_state)
             if current_state in self.emissions:
                 possible_emissions = list(self.emissions[current_state].keys())
-                emission_probs = list(self.emissions[current_state].values())
+                emission_probs = list(map(float, self.emissions[current_state].values()))
                 emission = np.random.choice(possible_emissions, p=emission_probs)
                 emissions.append(emission)
             else:
                 break
+            if current_state in self.transitions:
+                next_states = list(self.transitions[current_state].keys())
+                next_probs = list(map(float, self.transitions[current_state].values()))
+                current_state = np.random.choice(next_states, p=next_probs)
+            else:
+                break
+
         return Sequence(states, emissions)
 
     def forward(self, sequence):
-        pass
-    ## you do this: Implement the Viterbi algorithm. Given a Sequence with a list of emissions,
-    ## determine the most likely sequence of states.
+        forward_prob = [{}]
+
+        for state in self.transitions["#"]:
+            forward_prob[0][state] = (
+                    self.transitions["#"].get(state, 0) * self.emissions[state].get(sequence[0], 0)
+            )
+        for t in range(1, len(sequence)):
+            forward_prob.append({})
+            for current_state in self.transitions:
+                if current_state in self.emissions:
+                    prob_sum = sum(
+                        forward_prob[t - 1][prev_state] *
+                        self.transitions[prev_state].get(current_state, 0) *
+                        self.emissions[current_state].get(sequence[t], 0)
+                        for prev_state in forward_prob[t - 1]
+                    )
+                    forward_prob[t][current_state] = prob_sum
+        final_probs = forward_prob[-1]
+        most_prob_state = max(final_probs, key=final_probs.get)
+        total_prob = sum(final_probs.values())
+        norm_prob = final_probs[most_prob_state] / total_prob if total_prob > 0 else 0
+
+        return most_prob_state, norm_prob
 
 
 
@@ -103,8 +130,10 @@ class HMM:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hidden Markov Model Sequence Generator")
-    parser.add_argument("domain", help="Domain name (e.g., cat, partofspeech, lander)")
+    parser.add_argument("domain", help="Domain name (cat, partofspeech, lander)")
     parser.add_argument("--generate", type=int, help="Number of states to generate")
+    parser.add_argument("--forward", help="File with sequence of emissions to run forward algorithm")
+    parser.add_argument("--output_file", help="Output file to save generated emissions", default="generated_sequence.obs")
     args = parser.parse_args()
 
     hmm = HMM()
@@ -115,14 +144,45 @@ if __name__ == "__main__":
         print("Generated States:\n", ' '.join(sequence.stateseq))
         print("Generated Emissions:\n", ' '.join(sequence.outputseq))
 
+        with open(args.output_file, "w") as f:
+            line_length = 5
+            i = 0
+            while i < len(sequence.outputseq):
+                emission_chunk = sequence.outputseq[i:i + line_length]
+                pos_tags = ["VERB" if word == "meow" else "NOUN" if word == "purr" else "ADJ" for word in
+                            emission_chunk]
+                # f.write(' '.join(pos_tags) + " .\n")
+                f.write(' '.join(emission_chunk) + " .\n")
+                i += line_length
+                line_length = random.randint(3, 6)
+
+        print(f"Generated emissions saved to {args.output_file}")
+
     '''
-        run python HMM.py cat --generate 20
+        run python hmm.py partofspeech --generate 20 --output_file speech_parts.obs
+        run python HMM.py cat --generate 20 
         results:
             Generated States:
                 grumpy grumpy happy hungry grumpy happy happy hungry grumpy grumpy happy hungry grumpy happy happy hungry grumpy hungry grumpy happy
             Generated Emissions:
                 meow silent silent silent silent meow purr meow meow meow meow meow silent purr meow purr meow meow purr meow
+        run python hmm.py cat --generate 20 --output_file cat_sequence.obs
+        run python hmm.py lander --generate 20 --output_file lander_sequence.obs
     '''
+
+    safe_spots = ["4,3", "3,4", "4,4", "2,5", "5,5"]
+    if args.forward:
+        with open(args.forward, "r") as f:
+            for line in f:
+                emissions = line.strip().split()
+                if emissions:
+                    final_state, probability = hmm.forward(emissions)
+                    print(f"SEQUENCE: {emissions}")
+                    print(f"FINAL PREDICTED STATE: {final_state}")
+                    print(f"PROBABILITY: {probability}")
+                    if args.domain == "lander":
+                        status = "SAFE" if final_state in safe_spots else "NOT safe"
+                        print(f"Lander is: {status}")
 
 
 
