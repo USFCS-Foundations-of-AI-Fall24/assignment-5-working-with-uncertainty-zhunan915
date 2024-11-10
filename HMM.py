@@ -120,9 +120,33 @@ class HMM:
 
 
     def viterbi(self, sequence):
-        pass
-    ## You do this. Given a sequence with a list of emissions, fill in the most likely
-    ## hidden states using the Viterbi algorithm.
+        viterbi_prob = [{}]
+        path = {}
+
+        for state in self.emissions:
+            viterbi_prob[0][state] = (
+                    self.transitions["#"].get(state, 0) * self.emissions[state].get(sequence[0], 0)
+            )
+            path[state] = [state]
+
+        for t in range(1, len(sequence)):
+            viterbi_prob.append({})
+            new_path = {}
+
+            for current_state in self.emissions:
+                max_prob, best_prev_state = max(
+                    (viterbi_prob[t - 1][prev_state] *
+                     self.transitions[prev_state].get(current_state, 0) *
+                     self.emissions[current_state].get(sequence[t], 0), prev_state)
+                    for prev_state in self.emissions
+                )
+                viterbi_prob[t][current_state] = max_prob
+                new_path[current_state] = path[best_prev_state] + [current_state]
+
+            path = new_path
+
+        max_final_prob, best_final_state = max((viterbi_prob[-1][state], state) for state in self.emissions)
+        return path[best_final_state]
 
 
 
@@ -134,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--generate", type=int, help="Number of states to generate")
     parser.add_argument("--forward", help="File with sequence of emissions to run forward algorithm")
     parser.add_argument("--output_file", help="Output file to save generated emissions", default="generated_sequence.obs")
+    parser.add_argument("--viterbi", help="File with sequence of emissions to run viterbi algorithm")
     args = parser.parse_args()
 
     hmm = HMM()
@@ -149,14 +174,11 @@ if __name__ == "__main__":
             i = 0
             while i < len(sequence.outputseq):
                 emission_chunk = sequence.outputseq[i:i + line_length]
-                pos_tags = ["VERB" if word == "meow" else "NOUN" if word == "purr" else "ADJ" for word in
-                            emission_chunk]
-                # f.write(' '.join(pos_tags) + " .\n")
                 f.write(' '.join(emission_chunk) + " .\n")
                 i += line_length
                 line_length = random.randint(3, 6)
 
-        print(f"Generated emissions saved to {args.output_file}")
+            print(f"Generated emissions saved to {args.output_file}")
 
     '''
         run python hmm.py partofspeech --generate 20 --output_file speech_parts.obs
@@ -170,8 +192,8 @@ if __name__ == "__main__":
         run python hmm.py lander --generate 20 --output_file lander_sequence.obs
     '''
 
-    safe_spots = ["4,3", "3,4", "4,4", "2,5", "5,5"]
     if args.forward:
+        safe_spots = ["4,3", "3,4", "4,4", "2,5", "5,5"]
         with open(args.forward, "r") as f:
             for line in f:
                 emissions = line.strip().split()
@@ -184,5 +206,53 @@ if __name__ == "__main__":
                         status = "SAFE" if final_state in safe_spots else "NOT safe"
                         print(f"Lander is: {status}")
 
+    if args.viterbi:
+        with open(args.viterbi, "r") as f:
+            for line in f:
+                emissions = line.strip().split()
+                if emissions:
+                    most_likely_sequence = hmm.viterbi(emissions)
+                    print(f"{' '.join(most_likely_sequence)}")
+                    print(f"{' '.join(emissions)}")
 
-
+    '''
+        run -> python hmm.py cat --viterbi cat_sequence.obs    
+            SEQUENCE: silent silent meow meow silent .
+            LIKELY STATE SEQUENCE: grumpy grumpy happy hungry hungry hungry
+            
+            SEQUENCE: purr meow purr .
+            LIKELY STATE SEQUENCE: happy hungry hungry hungry
+            
+            SEQUENCE: purr purr meow .
+            LIKELY STATE SEQUENCE: happy happy hungry hungry
+            
+            SEQUENCE: purr silent silent purr .
+            LIKELY STATE SEQUENCE: happy happy happy hungry hungry
+            
+            SEQUENCE: purr purr silent meow silent .
+            LIKELY STATE SEQUENCE: happy happy happy hungry hungry hungry    
+        
+        run -> python hmm.py partofspeech --viterbi ambiguous_sents.obs
+            PRON VERB DET NOUN .
+            i shot the elephant .
+            PRON VERB DET NOUN ADP DET NOUN .
+            he took my shot at the elephant .
+            NOUN VERB ADP DET NOUN .
+            flies waited at the window .
+            DET NOUN VERB DET NOUN .
+            the pilot flies the plane .
+            DET VERB DET ADJ NOUN .
+            this is a light blanket .
+            PRON VERB DET NOUN PRT .
+            she turned the light off .
+            DET NOUN NOUN DET NOUN .
+            the lanterns light our path .
+            VERB PRON VERB PRON .
+            did you train her ?
+            DET NOUN VERB VERB ADV .
+            the train is arriving now .
+            PRON NOUN DET NOUN .
+            they book the ticket .
+            PRON VERB DET NOUN .
+            i love this book !
+    '''
