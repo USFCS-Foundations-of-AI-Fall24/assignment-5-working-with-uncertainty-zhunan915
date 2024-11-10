@@ -218,19 +218,19 @@ if __name__ == "__main__":
     '''
         run -> python hmm.py cat --viterbi cat_sequence.obs    
             SEQUENCE: silent silent meow meow silent .
-            LIKELY STATE SEQUENCE: grumpy grumpy happy hungry hungry hungry
+            LIKELY STATE SEQUENCE: grumpy grumpy happy hungry hungry 
             
             SEQUENCE: purr meow purr .
-            LIKELY STATE SEQUENCE: happy hungry hungry hungry
+            LIKELY STATE SEQUENCE: happy hungry hungry 
             
             SEQUENCE: purr purr meow .
-            LIKELY STATE SEQUENCE: happy happy hungry hungry
+            LIKELY STATE SEQUENCE: happy happy hungry 
             
             SEQUENCE: purr silent silent purr .
-            LIKELY STATE SEQUENCE: happy happy happy hungry hungry
+            LIKELY STATE SEQUENCE: happy happy happy hungry 
             
             SEQUENCE: purr purr silent meow silent .
-            LIKELY STATE SEQUENCE: happy happy happy hungry hungry hungry    
+            LIKELY STATE SEQUENCE: happy happy happy hungry hungry   
         
         run -> python hmm.py partofspeech --viterbi ambiguous_sents.obs
             PRON VERB DET NOUN .
