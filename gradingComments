@@ -1,0 +1,56 @@
+Assignment 5 Comments:
+
+sklearn:
+
+new dataset. 5/5
+
+random forest 5/5
+
+GridSearchCV 5/5
+
+Scatterplot 5/5
+
+Belief Networks:
+
+alarm queries 5/5
+
+car queries 5/5
+
+additional node 5/5
+
+HMM:
+
+load 5/5
+
+generate 10/10
+
+lander models 5/5
+
+forward 7/10
+I don't think you're generating the most probable state.
+For example:
+SEQUENCE: ['5,5', '5,5', '.']
+FINAL PREDICTED STATE: 1,1
+PROBABILITY: 0
+Lander is: NOT safe
+
+1,1 is not likely to be the most probable state.
+
+viterbi 15/15
+
+Utility:
+
+q1 5/5
+
+q2 5/5
+
+q3 2/2
+
+q4 3/3
+
+q5 2/2
+
+q6 3/3
+
+97/100
+
